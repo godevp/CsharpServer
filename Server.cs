@@ -19,7 +19,14 @@ class Server
     Int32 recvBytes;
     IPAddress clientIP;
     Thread UpdateThread;
-    Thread udpReceivingThread;
+    Thread udpThread;
+    Thread tcpThread;
+
+
+    //Players
+    List<TcpListener> listeners;
+    List<Player> playerList;
+
     #endregion
     /// <summary>
     ///Start is called before the first frame update
@@ -27,6 +34,9 @@ class Server
     public void Start()
     {
         Console.WriteLine("Server start");
+        listeners = new List<TcpListener>();
+        playerList= new List<Player>();
+
         UDPServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         UDPServerSocket.Bind(new IPEndPoint(IPAddress.Parse(localIP), localPort));
         clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
@@ -41,8 +51,8 @@ class Server
     {
         UpdateThread = new Thread(new ThreadStart(Update));
         StartThreadOnBackground(UpdateThread);
-        udpReceivingThread = new Thread(new ThreadStart(ReceiveUDPData));
-        StartThreadOnBackground(udpReceivingThread);
+        udpThread = new Thread(new ThreadStart(ReceiveUDPData));
+        StartThreadOnBackground(udpThread);
     }
     /// <summary>
     /// Setting the thread to background and starting it.
@@ -71,10 +81,40 @@ class Server
         recvBytes = UDPServerSocket.ReceiveFrom(buffer, ref clientEndPoint);
         if(recvBytes != 0)
         {
+            bool playerExists = false;
+            foreach(Player player in playerList)
+            {
+                if(player.name == (playerList.Count - 1).ToString())
+                {
+                    playerExists = true;
+                    Console.WriteLine("Player already exists");
+                    break;
+                }
+            }
+            if(!playerExists)
+            {
+                playerList.Add(new Player(clientEndPoint, playerList.Count.ToString()));
+             
+            }
             string message = System.Text.Encoding.ASCII.GetString(buffer, 0, recvBytes);
             clientIP = ((IPEndPoint)clientEndPoint).Address;
             Console.WriteLine(clientIP + " : " + message);
-            SendMessageToUDPClient("Connected to UDP Server", clientEndPoint);
+            switch (message)
+            {
+                case "test":
+                    foreach(Player player in playerList)
+                    {
+                        SendMessageToUDPClient("testFROMserver", player.playerEndPoint);
+                    }
+                    break;
+                case "Hello There!":
+                    SendMessageToUDPClient("Connected to UDP Server", clientEndPoint);
+                    clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+
+                default: break; 
+            }
+            
         }  
     }
     /// <summary>
