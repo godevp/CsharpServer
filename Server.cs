@@ -10,6 +10,7 @@ class Server
 {
     #region Variables
     Socket UDPServerSocket;
+    Socket UDPServerSocket2;
     string localIP = "10.0.196.70";
     int localPort = 20001;
     static int bufferSize = 1024;
@@ -39,6 +40,8 @@ class Server
 
         UDPServerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
         UDPServerSocket.Bind(new IPEndPoint(IPAddress.Parse(localIP), localPort));
+        UDPServerSocket2 = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        UDPServerSocket2.Bind(new IPEndPoint(IPAddress.Parse(localIP), 20002));
         clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
     }
     #region Threads
@@ -115,7 +118,47 @@ class Server
                 default: break; 
             }
             
-        }  
+        }
+
+
+        recvBytes = UDPServerSocket2.ReceiveFrom(buffer, ref clientEndPoint);
+        if (recvBytes != 0)
+        {
+            bool playerExists = false;
+            foreach (Player player in playerList)
+            {
+                if (player.name == (playerList.Count - 1).ToString())
+                {
+                    playerExists = true;
+                    Console.WriteLine("Player already exists");
+                    break;
+                }
+            }
+            if (!playerExists)
+            {
+                playerList.Add(new Player(clientEndPoint, playerList.Count.ToString()));
+
+            }
+            string message = System.Text.Encoding.ASCII.GetString(buffer, 0, recvBytes);
+            clientIP = ((IPEndPoint)clientEndPoint).Address;
+            Console.WriteLine(clientIP + " : " + message);
+            switch (message)
+            {
+                case "test":
+                    foreach (Player player in playerList)
+                    {
+                        SendMessageToUDPClient("testFROMserver", player.playerEndPoint);
+                    }
+                    break;
+                case "Hello There!":
+                    SendMessageToUDPClient("1" + ':' + "HELLOOOO", clientEndPoint);
+                    clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+
+                default: break;
+            }
+
+        }
     }
     /// <summary>
     /// Sending message to the clients with UDP protocol
@@ -126,6 +169,7 @@ class Server
     {
         bytesToSend = System.Text.Encoding.ASCII.GetBytes(message);
         UDPServerSocket.SendTo(bytesToSend, client);
+        UDPServerSocket2.SendTo(bytesToSend, client);
     }
     #endregion
 
