@@ -11,7 +11,7 @@ class Server
     #region Variables
     Socket UDPServerSocket;
     Socket UDPServerSocket2;
-    string localIP = "10.0.196.70";
+    string localIP = "192.168.0.156";
     int localPort = 20001;
     static int bufferSize = 1024;
     private readonly byte[] buffer = new byte[bufferSize];
