@@ -10,7 +10,7 @@ class Server
 {
     #region Variables
     Socket UDPServerSocket;
-    string localIP = "192.168.0.156";
+    string localIP = "10.0.196.70";
     int localPort = 20001;
     static int bufferSize = 1024;
     private readonly byte[] buffer = new byte[bufferSize];
@@ -108,7 +108,7 @@ class Server
                     }
                     break;
                 case "Hello There!":
-                    SendMessageToUDPClient("Connected to UDP Server", clientEndPoint);
+                    SendMessageToUDPClient("1" + ':' + "HELLOOOO", clientEndPoint);
                     clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
                     break;
 
