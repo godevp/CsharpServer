@@ -23,7 +23,7 @@ class Server
     List <Socket> udpSockets = new List <Socket> ();
     public const int UDPSocketsAmount = 2;
     private Socket udpSocket;
-    string localIP = "192.168.0.189";
+    string localIP = "10.0.246.195";
     int localPort = 20001;
     static int bufferSize = 1024;
     protected readonly byte[] buffer = new byte[bufferSize];
@@ -53,6 +53,7 @@ class Server
         //listeners = new List<TcpListener>();
         playerList= new List<Player>();
         clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+        startThreads();
     }
     #region Threads
     /// <summary>
@@ -60,13 +61,19 @@ class Server
     /// Each thread updates every frame.
     /// @@@ Put it in infinite loop to run.
     /// </summary>
-    public void RunThreads()
+    public void startThreads()
     {
         
         udpThread = new Thread(new ThreadStart(ReceiveUDPDataSocket1));
         StartThreadOnBackground(udpThread);
         // UpdateThread = new Thread(new ThreadStart(ReceiveUDPDataSocket2));
         // StartThreadOnBackground(UpdateThread);
+    }
+
+    public void runThreads()
+    {
+        ReceiveUDPDataSocket1();
+        //ReceiveUDPDataSocket2();
     }
     /// <summary>
     /// Setting the thread to background and starting it.
