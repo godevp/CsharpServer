@@ -10,12 +10,15 @@ public struct UdpHostToClient
 {
     public const int CLIENT_CONNECTED = 1;
     public const int THE_NAME_IS_USED = 2;
+    public const int ADD_PLAYER_TO_SCREEN = 3;
+    public const int SEND_PLAYERPOS_TO_CLIENT = 4;
 }
 
 public struct ClientToUdpHost
 {
     public const int CONNECT = 1;
     public const int DISCONNECT = 2;
+    public const int SEND_MY_DESTINATION = 3;
 }
 class Server
 {
@@ -121,12 +124,7 @@ class Server
             int identifier = 0;
             if ( splitter.Length > 1 && int.TryParse(splitter[1], out z))
                 identifier = int.Parse(splitter[1]);
-            
-            int msgOrderNumber = 0;
-            if (splitter.Length > 2 && int.TryParse(splitter[2], out z))
-                msgOrderNumber = int.Parse(splitter[2]);
-            
-            
+
             switch (identifier)
             {
                 case ClientToUdpHost.CONNECT:
@@ -143,9 +141,15 @@ class Server
                     }
                     if (!playerExists)
                     {
-                        playerList.Add(new Player(clientEndPoint, clientName));
+                        playerList.Add(new Player(clientEndPoint, clientName,splitter[2]));
                         Console.WriteLine("Added player to list: " + clientName);
                         SendMessageToUDPClient(UdpHostToClient.CLIENT_CONNECTED.ToString() + ':' + "you connected to server", clientEndPoint, socket);
+                        foreach (Player player in playerList)
+                        {
+                            if(player.name != clientName)
+                                SendMessageToUDPClient(UdpHostToClient.ADD_PLAYER_TO_SCREEN.ToString() + ':' + clientName + ':' + splitter[2],
+                                    player.playerEndPoint, socket);
+                        }
                     }
 
                     clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
@@ -154,6 +158,16 @@ class Server
                 case ClientToUdpHost.DISCONNECT:
                     Console.WriteLine("Removing : " + clientName);
                     playerList.RemoveAll(player => player.name == clientName);
+                    break;
+                
+                case ClientToUdpHost.SEND_MY_DESTINATION:
+                    foreach (Player player in playerList)
+                    {
+                        if (player.name == clientName)
+                            return;
+                        SendMessageToUDPClient(UdpHostToClient.SEND_PLAYERPOS_TO_CLIENT.ToString() + ':' + clientName + ':' + splitter[2]
+                                                , player.playerEndPoint, socket);
+                    }
                     break;
 
                 default: break;
@@ -169,11 +183,6 @@ class Server
     {
         bytesToSend = System.Text.Encoding.ASCII.GetBytes(message);
         socket.SendTo(bytesToSend, client);
-    }
-    
-    public void MessageRecevingWithoutThreads()
-    {
-        MessageProcessingFromSocket(udpSocket);
     }
     #endregion
 
