@@ -8,7 +8,7 @@ class MyMain
         server.Start();
         while (true)
         {
-            server.RunThreads();
+            server.MessageRecevingWithoutThreads();
         }
     }
 }

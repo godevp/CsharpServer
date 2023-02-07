@@ -9,6 +9,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 public struct UdpHostToClient
 {
     public const int CLIENT_CONNECTED = 1;
+    public const int THE_NAME_IS_USED = 2;
 }
 
 public struct ClientToUdpHost
@@ -21,9 +22,8 @@ class Server
     #region Variables
     List <Socket> udpSockets = new List <Socket> ();
     public const int UDPSocketsAmount = 2;
-    Socket UDPServerSocket;
-    Socket UDPServerSocket2;
-    string localIP = "192.168.0.156";
+    private Socket udpSocket;
+    string localIP = "192.168.0.189";
     int localPort = 20001;
     static int bufferSize = 1024;
     protected readonly byte[] buffer = new byte[bufferSize];
@@ -47,12 +47,10 @@ class Server
     public void Start()
     {
         Console.WriteLine("Server start");
-        for (int i = 0; i < UDPSocketsAmount; i++)
-        {
-            udpSockets.Add(new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp));
-            udpSockets[i].Bind(new IPEndPoint(IPAddress.Parse(localIP), localPort + i));
-        }
-        listeners = new List<TcpListener>();
+        udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+        udpSocket.Bind(new IPEndPoint(IPAddress.Parse(localIP), localPort));
+        
+        //listeners = new List<TcpListener>();
         playerList= new List<Player>();
         clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
     }
@@ -64,10 +62,11 @@ class Server
     /// </summary>
     public void RunThreads()
     {
-        UpdateThread = new Thread(new ThreadStart(ReceiveUDPDataSocket1));
-        StartThreadOnBackground(UpdateThread);
-        udpThread = new Thread(new ThreadStart(ReceiveUDPDataSocket2));
+        
+        udpThread = new Thread(new ThreadStart(ReceiveUDPDataSocket1));
         StartThreadOnBackground(udpThread);
+        // UpdateThread = new Thread(new ThreadStart(ReceiveUDPDataSocket2));
+        // StartThreadOnBackground(UpdateThread);
     }
     /// <summary>
     /// Setting the thread to background and starting it.
@@ -86,7 +85,7 @@ class Server
     /// </summary>
     public void ReceiveUDPDataSocket1()
     {
-        MessageProcessingFromSocket(udpSockets[0]);
+        MessageProcessingFromSocket(udpSocket);
     }
     /// <summary>
     /// Thread with receving messages from udp socket number 2
@@ -102,46 +101,56 @@ class Server
         if (recvBytes != 0)
         {
             
-            string message = System.Text.Encoding.ASCII.GetString(buffer, 0, recvBytes);
+            string fullMessage = System.Text.Encoding.ASCII.GetString(buffer, 0, recvBytes);
             clientIP = ((IPEndPoint)clientEndPoint).Address;
-            Console.WriteLine(clientIP + " : " + message);
+            Console.WriteLine(clientIP + " : " + fullMessage);
+            
+            string[] splitter = fullMessage.Split(':');
+            
             int z = 0;
-            string[] splitter = message.Split(':');
-            if (int.TryParse(splitter[0], out z))
+            
+            string clientName = splitter[0];
+            
+            int identifier = 0;
+            if ( splitter.Length > 1 && int.TryParse(splitter[1], out z))
+                identifier = int.Parse(splitter[1]);
+            
+            int msgOrderNumber = 0;
+            if (splitter.Length > 2 && int.TryParse(splitter[2], out z))
+                msgOrderNumber = int.Parse(splitter[2]);
+            
+            
+            switch (identifier)
             {
-                switch (int.Parse(splitter[0]))
-                {
-                    case ClientToUdpHost.CONNECT:
-                        bool playerExists = false;
-                        foreach (Player player in playerList)
+                case ClientToUdpHost.CONNECT:
+                    bool playerExists = false;
+                    foreach (Player player in playerList)
+                    {
+                        if (player.name == clientName)
                         {
-                            if (player.name == splitter[1])
-                            {
-                                playerExists = true;
-                                Console.WriteLine("Player already exists: " + player.name);
-                                break;
-                            }
+                            playerExists = true;
+                            Console.WriteLine("Player already exists: " + clientName);
+                            SendMessageToUDPClient(UdpHostToClient.THE_NAME_IS_USED.ToString() + ':' + "the name already exists on server", clientEndPoint, socket);
+                            break;
                         }
-                        if (!playerExists)
-                        {
-                            playerList.Add(new Player(clientEndPoint, splitter[1]));
-                            Console.WriteLine("Added player to list: " + splitter[1]);
-                        }
+                    }
+                    if (!playerExists)
+                    {
+                        playerList.Add(new Player(clientEndPoint, clientName));
+                        Console.WriteLine("Added player to list: " + clientName);
                         SendMessageToUDPClient(UdpHostToClient.CLIENT_CONNECTED.ToString() + ':' + "you connected to server", clientEndPoint, socket);
-                        clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                        
-                        break;
-                    case ClientToUdpHost.DISCONNECT:
-                        Console.WriteLine("PlayerlistCount : " + playerList.Count);
-                        playerList.RemoveAll(player => player.name == splitter[1]);
-                        Console.WriteLine("PlayerlistCount after delete : " + playerList.Count);
-                        break;
+                    }
 
-                    default: break;
-                }
+                    clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                    break;
+                
+                case ClientToUdpHost.DISCONNECT:
+                    Console.WriteLine("Removing : " + clientName);
+                    playerList.RemoveAll(player => player.name == clientName);
+                    break;
+
+                default: break;
             }
-           
-
         }
     }
     /// <summary>
@@ -154,10 +163,10 @@ class Server
         bytesToSend = System.Text.Encoding.ASCII.GetBytes(message);
         socket.SendTo(bytesToSend, client);
     }
-
-    public void SendUDPMessageToAllClients(string message, EndPoint client)
+    
+    public void MessageRecevingWithoutThreads()
     {
-       
+        MessageProcessingFromSocket(udpSocket);
     }
     #endregion
 
