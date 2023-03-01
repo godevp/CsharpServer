@@ -9,7 +9,7 @@ class MyMain
 
         while (true)
         {
-           server.runThreads(); 
+            server.ListenForClients();
         }
     }
 }

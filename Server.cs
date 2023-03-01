@@ -5,186 +5,131 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 using System.Threading;
+using CsharpServer;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-public struct UdpHostToClient
-{
-    public const int CLIENT_CONNECTED = 1;
-    public const int THE_NAME_IS_USED = 2;
-    public const int ADD_PLAYER_TO_SCREEN = 3;
-    public const int SEND_PLAYERPOS_TO_CLIENT = 4;
-}
 
-public struct ClientToUdpHost
-{
-    public const int CONNECT = 1;
-    public const int DISCONNECT = 2;
-    public const int SEND_MY_DESTINATION = 3;
-}
 class Server
 {
     #region Variables
-    List <Socket> udpSockets = new List <Socket> ();
-    public const int UDPSocketsAmount = 2;
-    private Socket udpSocket;
-    string localIP = "10.0.246.195";
-    int localPort = 20001;
+    //Common
+    private IPAddress serverIP = IPAddress.Parse("192.168.0.189");
+    int serverPort = 20001;
     static int bufferSize = 1024;
-    protected readonly byte[] buffer = new byte[bufferSize];
     byte[] bytesToSend;
     EndPoint clientEndPoint;
     Int32 recvBytes;
     IPAddress clientIP;
-    Thread UpdateThread;
+    
+    
+    //UDP Part
     Thread udpThread;
+    private Socket udpSocket;
+    
+    
+    //TCP Part
     Thread tcpThread;
+    public bool StartUpdateOfClients = false;
+    private const int MAX_PLAYERS = 100;
+    private TcpClient[] clients = new TcpClient[MAX_PLAYERS];
+    private TcpListener tcpListener;
 
-
+    
+   
+    
     //Players
-    List<TcpListener> listeners;
     List<Player> playerList;
 
     #endregion
+    
     /// <summary>
-    ///Start is called before the first frame update
+    ///Starts the server by initializing a TCP listener on a specified IP address and port.****Later can add UDP
     /// </summary>
     public void Start()
     {
         Console.WriteLine("Server start");
-        udpSocket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        udpSocket.Bind(new IPEndPoint(IPAddress.Parse(localIP), localPort));
-        
-        //listeners = new List<TcpListener>();
-        playerList= new List<Player>();
-        clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-        startThreads();
+        tcpThread = new Thread(new ThreadStart(ListenForClients));
+        tcpListener = new TcpListener(serverIP, serverPort);
+        tcpListener.Start();
+        Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
     }
-    #region Threads
     /// <summary>
-    /// Function which calls all the existing threads to perform.
-    /// Each thread updates every frame.
-    /// @@@ Put it in infinite loop to run.
+    /// Listens for incoming TCP client connections, accepts them, finds an available slot in the clients array, and starts a new thread to handle the client.
     /// </summary>
-    public void startThreads()
+    public void ListenForClients()
     {
-        
-        udpThread = new Thread(new ThreadStart(ReceiveUDPDataSocket1));
-        StartThreadOnBackground(udpThread);
-        // UpdateThread = new Thread(new ThreadStart(ReceiveUDPDataSocket2));
-        // StartThreadOnBackground(UpdateThread);
-    }
+        // Wait for a client to connect
+            TcpClient client = tcpListener.AcceptTcpClient();
 
-    public void runThreads()
-    {
-        ReceiveUDPDataSocket1();
-        //ReceiveUDPDataSocket2();
-    }
-    /// <summary>
-    /// Setting the thread to background and starting it.
-    /// Save space to start the threads in future.
-    /// </summary>
-    /// <param name="xThread"></param>
-    public void StartThreadOnBackground(Thread xThread)
-    {
-        xThread.IsBackground = true;
-        xThread.Start();
-    }
-    #endregion
-    #region Functions to be called in threads.
-    /// <summary>
-    /// Thread with receving messages from udp socket number 1
-    /// </summary>
-    public void ReceiveUDPDataSocket1()
-    {
-        MessageProcessingFromSocket(udpSocket);
-    }
-    /// <summary>
-    /// Thread with receving messages from udp socket number 2
-    /// </summary>
-    private void ReceiveUDPDataSocket2()
-    {
-        MessageProcessingFromSocket(udpSockets[1]);
-    }
-
-    public void MessageProcessingFromSocket(Socket socket)
-    {
-        recvBytes = socket.ReceiveFrom(buffer, ref clientEndPoint);
-        if (recvBytes != 0)
-        {
-            
-            string fullMessage = System.Text.Encoding.ASCII.GetString(buffer, 0, recvBytes);
-            clientIP = ((IPEndPoint)clientEndPoint).Address;
-            Console.WriteLine(clientIP + " : " + fullMessage);
-            
-            string[] splitter = fullMessage.Split(':');
-            
-            int z = 0;
-            
-            string clientName = splitter[0];
-            
-            int identifier = 0;
-            if ( splitter.Length > 1 && int.TryParse(splitter[1], out z))
-                identifier = int.Parse(splitter[1]);
-
-            switch (identifier)
+            // Find an available slot in the clients array
+            int playerIndex = -1;
+            for (int i = 0; i < MAX_PLAYERS; i++)
             {
-                case ClientToUdpHost.CONNECT:
-                    bool playerExists = false;
-                    foreach (Player player in playerList)
-                    {
-                        if (player.name == clientName)
-                        {
-                            playerExists = true;
-                            Console.WriteLine("Player already exists: " + clientName);
-                            SendMessageToUDPClient(UdpHostToClient.THE_NAME_IS_USED.ToString() + ':' + "the name already exists on server", clientEndPoint, socket);
-                            break;
-                        }
-                    }
-                    if (!playerExists)
-                    {
-                        playerList.Add(new Player(clientEndPoint, clientName,splitter[2]));
-                        Console.WriteLine("Added player to list: " + clientName);
-                        SendMessageToUDPClient(UdpHostToClient.CLIENT_CONNECTED.ToString() + ':' + "you connected to server", clientEndPoint, socket);
-                        foreach (Player player in playerList)
-                        {
-                            if(player.name != clientName)
-                                SendMessageToUDPClient(UdpHostToClient.ADD_PLAYER_TO_SCREEN.ToString() + ':' + clientName + ':' + splitter[2],
-                                    player.playerEndPoint, socket);
-                        }
-                    }
+                if (clients[i] == null)
+                {
+                    playerIndex = i;
+                    break;
+                }
+            }
 
-                    clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                    break;
-                
-                case ClientToUdpHost.DISCONNECT:
-                    Console.WriteLine("Removing : " + clientName);
-                    playerList.RemoveAll(player => player.name == clientName);
-                    break;
-                
-                case ClientToUdpHost.SEND_MY_DESTINATION:
-                    foreach (Player player in playerList)
-                    {
-                        if (player.name == clientName)
-                            return;
-                        SendMessageToUDPClient(UdpHostToClient.SEND_PLAYERPOS_TO_CLIENT.ToString() + ':' + clientName + ':' + splitter[2]
-                                                , player.playerEndPoint, socket);
-                    }
-                    break;
+            // If no available slot was found, disconnect the client and continue listening
+            if (playerIndex == -1)
+            {
+                Console.WriteLine("Maximum number of players reached, disconnecting client {0}", client.Client.RemoteEndPoint);
+                client.Close();
+                return;
+            }
 
-                default: break;
+            // Add the client to the clients array and start a new thread to handle the client
+            clients[playerIndex] = client;
+            Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClient));
+            clientThread.Start(playerIndex);
+    }
+    /// <summary>
+    /// Handles the TCP client connection by reading data from the client, checking if the client has disconnected,
+    /// converting the received data to a string, and passing the data to TCPMessageProcessing.HandleMessage() for processing.
+    /// </summary>
+    /// <param name="playerIndexObj"></param>
+    private void HandleClient(object playerIndexObj)
+    {
+        int playerIndex = (int)playerIndexObj;
+        TcpClient client = clients[playerIndex];
+        NetworkStream stream = client.GetStream();
+        byte[] buffer = new byte[bufferSize];
+        int bytesReceived;
+        
+        byte[] welcomeMessageBytes = Encoding.ASCII.GetBytes("Welcome to the MMO game server!");
+        stream.Write(welcomeMessageBytes, 0, welcomeMessageBytes.Length);
+
+        while (true)
+        {
+            try
+            {
+                // Receive data from the client
+                bytesReceived = stream.Read(buffer, 0, buffer.Length);
+
+                // If no data was received, the client has disconnected
+                if (bytesReceived == 0)
+                {
+                    Console.WriteLine("Client {0} disconnected", client.Client.RemoteEndPoint);
+                    clients[playerIndex] = null;
+                    client.Close();
+                    return;
+                }
+
+                // Convert the received data to a string
+                string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
+                Console.WriteLine(data);
+                List<TcpClient> clientsList = clients.ToList();
+                
+                TCPMessageProcessing.HandleMessage(client,data,clientsList);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception occurred while handling client {0}: {1}", client.Client.RemoteEndPoint, ex.Message);
+                clients[playerIndex] = null;
+                client.Close();
+                return;
             }
         }
     }
-    /// <summary>
-    /// Sending message to the clients with UDP protocol
-    /// </summary>
-    /// <param name="message"></param>
-    /// <param name="client"></param>
-    public void SendMessageToUDPClient(string message, EndPoint client, Socket socket)
-    {
-        bytesToSend = System.Text.Encoding.ASCII.GetBytes(message);
-        socket.SendTo(bytesToSend, client);
-    }
-    #endregion
-
-
 }
