@@ -11,6 +11,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 class Server
 {
     #region Variables
+    
     //Common
     private IPAddress serverIP = IPAddress.Parse("192.168.0.189");
     int serverPort = 20001;
@@ -20,11 +21,9 @@ class Server
     Int32 recvBytes;
     IPAddress clientIP;
     
-    
     //UDP Part
     Thread udpThread;
     private Socket udpSocket;
-    
     
     //TCP Part
     Thread tcpThread;
@@ -32,9 +31,6 @@ class Server
     private const int MAX_PLAYERS = 100;
     private TcpClient[] clients = new TcpClient[MAX_PLAYERS];
     private TcpListener tcpListener;
-
-    
-   
     
     //Players
     List<Player> playerList;
@@ -50,6 +46,8 @@ class Server
         tcpThread = new Thread(new ThreadStart(ListenForClients));
         tcpListener = new TcpListener(serverIP, serverPort);
         tcpListener.Start();
+        playerList = new List<Player>();
+        playerList.Add(new Player("123","123"));
         Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
     }
     /// <summary>
@@ -111,17 +109,43 @@ class Server
                 if (bytesReceived == 0)
                 {
                     Console.WriteLine("Client {0} disconnected", client.Client.RemoteEndPoint);
+                    
+                    //need to say that the account isn't connected anymore
+                    playerList.Any(player => player.Disconnect(client));
+                    
                     clients[playerIndex] = null;
                     client.Close();
                     return;
                 }
-
+                
                 // Convert the received data to a string
                 string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
                 Console.WriteLine(data);
-                List<TcpClient> clientsList = clients.ToList();
-                
-                TCPMessageProcessing.HandleMessage(client,data,clientsList);
+  
+                string[] messageSplitter = data.Split(';');
+                if (messageSplitter.Length > 1)
+                {
+                    string log = messageSplitter[0], pas = messageSplitter[1];
+                    if (playerList.Any(player => (player.getLogin() == log && player.isConnected)))
+                    {
+                        //message processing part
+                        List<TcpClient> clientsList = clients.ToList();
+                        TCPMessageProcessing.HandleMessage(client, data, clientsList);
+                    }
+                    else
+                    {
+                        //login part
+                        if (playerList.Any(player => player.isLoginValid(log,pas,client)))
+                        {
+                            byte[] successMessageBytes = Encoding.ASCII.GetBytes("Logged in successfully");
+                            stream.Write(successMessageBytes, 0, successMessageBytes.Length);
+                        }
+                        else
+                        {
+                            
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Numerics;
+using System.Text;
 
 class Player
 {
@@ -8,31 +10,62 @@ class Player
     public string name = "";
     public string currentXYZ = "";
     public string destXYZ = "";
-    public Player(EndPoint eP, string name, string newXYZ)
+
+    //Login properties
+    private string login = "123";
+    private string password = "123";
+    public bool isConnected = false;
+
+    public TcpClient clientCopy;
+    
+    public Player(string login, string password)
     {
-        playerEndPoint = eP;
-        this.name = name;
-        currentXYZ = newXYZ;
+        this.login = login;
+        this.password = password;
     }
 
-    public Vector3 LerpFromTo(Vector3 start, Vector3 where, float percentage)
-    {
-        var distance = where - start;
-        return start + distance * percentage;
-    }
-    public static Vector3 MoveTowards11(Vector3 current, Vector3 target, float maxDistanceDelta)
-    {
-        Vector3 direction = target - current;
-        float magnitude = Magnitude(direction);
 
-        if (magnitude <= maxDistanceDelta || magnitude == 0f)
+    public bool isLoginValid(string login, string password, TcpClient client)
+    {
+        if (isConnected)
         {
-            return target;
+            return false;
         }
-        return current + direction / magnitude * maxDistanceDelta;
+
+
+        if (login != this.login)
+        {
+            return false;
+        }
+
+
+        if (password != this.password)
+        {
+            return false;
+        }
+
+        clientCopy = client;
+        isConnected = true;
+        return true;
     }
-    public static float Magnitude(Vector3 vector)
+
+    public string getLogin()
     {
-        return (float)Math.Sqrt(vector.X * vector.X + vector.Y * vector.Y + vector.Y * vector.Y);
+        return login;
+    }
+
+    public bool Disconnect(TcpClient client)
+    {
+        if (client == clientCopy)
+        {
+            clientCopy = null;
+            isConnected = false;
+            return true;
+        }
+
+        return false;
     }
 }
+
+
+
