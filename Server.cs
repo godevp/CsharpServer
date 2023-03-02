@@ -8,6 +8,9 @@ using System.Threading;
 using CsharpServer;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
+
+
+
 class Server
 {
     #region Variables
@@ -33,7 +36,7 @@ class Server
     private TcpListener tcpListener;
     
     //Players
-    List<Player> playerList;
+    List<Account> accountList;
 
     #endregion
     
@@ -42,12 +45,13 @@ class Server
     /// </summary>
     public void Start()
     {
+        //Todo: On start of the server, load a JSON file which will contain all the existing accounts to a list of accounts.
         Console.WriteLine("Server start");
         tcpThread = new Thread(new ThreadStart(ListenForClients));
         tcpListener = new TcpListener(serverIP, serverPort);
         tcpListener.Start();
-        playerList = new List<Player>();
-        playerList.Add(new Player("123","123"));
+        accountList = new List<Account>();
+        accountList.Add(new Account("123","123"));
         Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
     }
     /// <summary>
@@ -97,7 +101,7 @@ class Server
         
         byte[] welcomeMessageBytes = Encoding.ASCII.GetBytes("Welcome to the MMO game server!");
         stream.Write(welcomeMessageBytes, 0, welcomeMessageBytes.Length);
-
+        
         while (true)
         {
             try
@@ -111,13 +115,13 @@ class Server
                     Console.WriteLine("Client {0} disconnected", client.Client.RemoteEndPoint);
                     
                     //need to say that the account isn't connected anymore
-                    playerList.Any(player => player.Disconnect(client));
+                    accountList.Any(account => account.Disconnect(client));
                     
                     clients[playerIndex] = null;
                     client.Close();
                     return;
                 }
-                
+
                 // Convert the received data to a string
                 string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
                 Console.WriteLine(data);
@@ -126,7 +130,7 @@ class Server
                 if (messageSplitter.Length > 1)
                 {
                     string log = messageSplitter[0], pas = messageSplitter[1];
-                    if (playerList.Any(player => (player.getLogin() == log && player.isConnected)))
+                    if (accountList.Any(account => (account.getLogin() == log && account.isConnected)))
                     {
                         //message processing part
                         List<TcpClient> clientsList = clients.ToList();
@@ -135,14 +139,19 @@ class Server
                     else
                     {
                         //login part
-                        if (playerList.Any(player => player.isLoginValid(log,pas,client)))
+                        if (accountList.Any(account => account.isLoginValid(log,pas,client)))
                         {
                             byte[] successMessageBytes = Encoding.ASCII.GetBytes("Logged in successfully");
                             stream.Write(successMessageBytes, 0, successMessageBytes.Length);
                         }
                         else
                         {
-                            
+                            //Todo: Make different if statements in which we will decide what error message to send back
+                            // if(accountList.Any(account => account.))
+                            //
+                            //
+                            // byte[] errorMessageBytes = Encoding.ASCII.GetBytes("Can't log in");
+                            // stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
                         }
                     }
                 }

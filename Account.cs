@@ -4,13 +4,8 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 
-class Player
+class Account
 {
-    public EndPoint playerEndPoint;
-    public string name = "";
-    public string currentXYZ = "";
-    public string destXYZ = "";
-
     //Login properties
     private string login = "123";
     private string password = "123";
@@ -18,7 +13,7 @@ class Player
 
     public TcpClient clientCopy;
     
-    public Player(string login, string password)
+    public Account(string login, string password)
     {
         this.login = login;
         this.password = password;
