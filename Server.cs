@@ -61,8 +61,7 @@ class Server
     public void ListenForClients()
     {
         // Wait for a client to connect
-        Console.WriteLine("FEWFEWFEW");
-            TcpClient client = tcpListener.AcceptTcpClient();
+        TcpClient client = tcpListener.AcceptTcpClient();
 
             // Find an available slot in the clients array
             int playerIndex = -1;
@@ -108,7 +107,6 @@ class Server
         {
             try
             {
-                Console.WriteLine("FEWFEWFEW2222");
                 // Receive data from the client
                 bytesReceived = stream.Read(buffer, 0, buffer.Length);
 
@@ -133,7 +131,7 @@ class Server
                 if (messageSplitter.Length > 1)
                 {
                     string log = messageSplitter[0], pas = messageSplitter[1];
-                    if (accountList.Any(account => (account.getLogin() == log && account.isConnected)))
+                    if (accountList.Any(account => (account.getLogin() == log && account.isConnected && account.clientCopy == client)))
                     {
                         //message processing part
                         List<TcpClient> clientsList = clients.ToList();
@@ -150,28 +148,33 @@ class Server
                         }
                         else
                         {
+                            Account tempAccount;
+                            string errorMessage = "error";
                             //Todo: Make different if statements in which we will decide what error message to send back
-                            if (accountList.Any(account => account.getLogin() != log))
+                            if (!(accountList.Any(account => account.getLogin() == log)))
                             {
                                 //no login like that found in created accounts.
-                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("account with this login not exists in our database.");
-                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
-                                return;
+                                errorMessage = "account with this login not exists in our database.";
                             }
-                            if(accountList.Any(account => account.PasswordIsValid(pas)))
+                            else
                             {
-                                //the password received for existing login is incorrect.
-                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("the password is incorrect.");
-                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
-                                return;
+                                tempAccount = accountList.Find(account => account.getLogin() == log);
+                                Console.WriteLine("LoginExist");
+                                if(!tempAccount.PasswordIsValid(pas))
+                                {
+                                    //the password received for existing login is incorrect.
+                                    errorMessage = "the password is incorrect.";
+                                }
+                                else if(tempAccount.isConnected)
+                                {
+                                    //the password received for existing login is incorrect.
+                                    errorMessage = "the account is in use.";
+                                }
                             }
-                            if(accountList.Any(account => account.isConnected))
-                            {
-                                //the password received for existing login is incorrect.
-                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("the account is in use.");
-                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
-                                return;
-                            }
+                           
+                            
+                            byte[] errorMessageBytes = Encoding.ASCII.GetBytes(errorMessage);
+                            stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
                         }
                     }
                 }
