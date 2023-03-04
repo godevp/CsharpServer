@@ -32,7 +32,7 @@ public class TCPMessageProcessing
     {
         NetworkStream senderStream = sender.GetStream();
         string response = "";
-        string[] splitter = message.Split(";");
+        string[] splitter = message.Split(":");
         int c = 0;
         int identifier = 0;
         if (int.TryParse(splitter[1], out c))

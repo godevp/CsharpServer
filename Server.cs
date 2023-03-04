@@ -127,7 +127,7 @@ class Server
                 string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
                 Console.WriteLine(data);
   
-                string[] messageSplitter = data.Split(';');
+                string[] messageSplitter = data.Split(':');
                 if (messageSplitter.Length > 1)
                 {
                     string log = messageSplitter[0], pas = messageSplitter[1];
