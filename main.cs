@@ -9,7 +9,6 @@ class MyMain
 
         while (true)
         {
-            server.check = true;
             server.ListenForClients();
         }
     }

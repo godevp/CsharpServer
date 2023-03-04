@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Numerics;
 using System.Text;
 
-class Account
+public class Account
 {
     //Login properties
     private string login = "123";

@@ -35,9 +35,8 @@ class Server
     private TcpClient[] clients = new TcpClient[MAX_PLAYERS];
     private TcpListener tcpListener;
 
-    public bool check = true;
     //Players
-    List<Account> accountList;
+    private List<Account> accountList;
 
     #endregion
     
@@ -87,6 +86,12 @@ class Server
             Thread clientThread = new Thread(new ParameterizedThreadStart(HandleClient));
             clientThread.Start(playerIndex);
     }
+
+
+    public List<Account> GetAccountList()
+    {
+        return accountList;
+    }
     /// <summary>
     /// Handles the TCP client connection by reading data from the client, checking if the client has disconnected,
     /// converting the received data to a string, and passing the data to TCPMessageProcessing.HandleMessage() for processing.
@@ -103,7 +108,7 @@ class Server
         byte[] welcomeMessageBytes = Encoding.ASCII.GetBytes("Welcome to the MMO game server!");
         stream.Write(welcomeMessageBytes, 0, welcomeMessageBytes.Length);
         
-        while (check)
+        while (true)
         {
             try
             {
@@ -126,58 +131,11 @@ class Server
                 // Convert the received data to a string
                 string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
                 Console.WriteLine(data);
-  
-                string[] messageSplitter = data.Split(':');
-                if (messageSplitter.Length > 1)
-                {
-                    string log = messageSplitter[0], pas = messageSplitter[1];
-                    if (accountList.Any(account => (account.getLogin() == log && account.isConnected && account.clientCopy == client)))
-                    {
-                        //message processing part
-                        List<TcpClient> clientsList = clients.ToList();
-                        TCPMessageProcessing.HandleMessage(client, data, clientsList);
-                    }
-                    else
-                    {
-                        
-                        //login part
-                        if (accountList.Any(account => account.isLoginValid(log,pas,client)))
-                        {
-                            byte[] successMessageBytes = Encoding.ASCII.GetBytes("Logged in successfully");
-                            stream.Write(successMessageBytes, 0, successMessageBytes.Length);
-                        }
-                        else
-                        {
-                            Account tempAccount;
-                            string errorMessage = "error";
-                            //Todo: Make different if statements in which we will decide what error message to send back
-                            if (!(accountList.Any(account => account.getLogin() == log)))
-                            {
-                                //no login like that found in created accounts.
-                                errorMessage = "account with this login not exists in our database.";
-                            }
-                            else
-                            {
-                                tempAccount = accountList.Find(account => account.getLogin() == log);
-                                Console.WriteLine("LoginExist");
-                                if(!tempAccount.PasswordIsValid(pas))
-                                {
-                                    //the password received for existing login is incorrect.
-                                    errorMessage = "the password is incorrect.";
-                                }
-                                else if(tempAccount.isConnected)
-                                {
-                                    //the password received for existing login is incorrect.
-                                    errorMessage = "the account is in use.";
-                                }
-                            }
-                           
-                            
-                            byte[] errorMessageBytes = Encoding.ASCII.GetBytes(errorMessage);
-                            stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
-                        }
-                    }
-                }
+                
+                List<TcpClient> clientsList = clients.ToList();
+                TCPMessageProcessing.StartMessageProcessing(client, data, clientsList, accountList);
+                
+               
             }
             catch (Exception ex)
             {
