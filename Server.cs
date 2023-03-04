@@ -34,7 +34,8 @@ class Server
     private const int MAX_PLAYERS = 100;
     private TcpClient[] clients = new TcpClient[MAX_PLAYERS];
     private TcpListener tcpListener;
-    
+
+    public bool check = true;
     //Players
     List<Account> accountList;
 
@@ -60,6 +61,7 @@ class Server
     public void ListenForClients()
     {
         // Wait for a client to connect
+        Console.WriteLine("FEWFEWFEW");
             TcpClient client = tcpListener.AcceptTcpClient();
 
             // Find an available slot in the clients array
@@ -102,10 +104,11 @@ class Server
         byte[] welcomeMessageBytes = Encoding.ASCII.GetBytes("Welcome to the MMO game server!");
         stream.Write(welcomeMessageBytes, 0, welcomeMessageBytes.Length);
         
-        while (true)
+        while (check)
         {
             try
             {
+                Console.WriteLine("FEWFEWFEW2222");
                 // Receive data from the client
                 bytesReceived = stream.Read(buffer, 0, buffer.Length);
 
@@ -138,6 +141,7 @@ class Server
                     }
                     else
                     {
+                        
                         //login part
                         if (accountList.Any(account => account.isLoginValid(log,pas,client)))
                         {
@@ -147,11 +151,27 @@ class Server
                         else
                         {
                             //Todo: Make different if statements in which we will decide what error message to send back
-                            // if(accountList.Any(account => account.))
-                            //
-                            //
-                            // byte[] errorMessageBytes = Encoding.ASCII.GetBytes("Can't log in");
-                            // stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
+                            if (accountList.Any(account => account.getLogin() != log))
+                            {
+                                //no login like that found in created accounts.
+                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("account with this login not exists in our database.");
+                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
+                                return;
+                            }
+                            if(accountList.Any(account => account.PasswordIsValid(pas)))
+                            {
+                                //the password received for existing login is incorrect.
+                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("the password is incorrect.");
+                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
+                                return;
+                            }
+                            if(accountList.Any(account => account.isConnected))
+                            {
+                                //the password received for existing login is incorrect.
+                                byte[] errorMessageBytes = Encoding.ASCII.GetBytes("the account is in use.");
+                                stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
+                                return;
+                            }
                         }
                     }
                 }

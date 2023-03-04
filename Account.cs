@@ -60,6 +60,11 @@ class Account
 
         return false;
     }
+
+    public bool PasswordIsValid(string password)
+    {
+        return (this.password == password);
+    }
 }
 
 
