@@ -11,38 +11,74 @@ public struct TCPHostToClient
 
 public struct TCPClientToHost
 {
+    public const int DISCONNECT = 1;
 
-    
 }
 public class TCPMessageProcessing
 {
-    public static void StartMessageProcessing(TcpClient sender, string message, List<TcpClient> clients, List<Account> accountList)
+    public static void StartMessageProcessing(TcpClient sender, string message, List<Account> accountList, TcpClient[] clientsArray, int playerIndex)
     {
         string[] messageSplitter = message.Split(':');
+        List<TcpClient> clients = clientsArray.ToList();
+        
         if (messageSplitter.Length > 1)
         {
             string log = messageSplitter[0], pas = messageSplitter[1];
             if (accountList.Any(account => (account.getLogin() == log && account.isConnected && account.clientCopy == sender)))
             {
                 //message processing part
-                MessageProcessing(sender, message, clients);
+                MessageProcessing(sender, message,accountList,clientsArray,playerIndex);
             }
             else
             { 
                 //login part
-                LoginPart(sender,message,clients,accountList);
+                LoginPart(sender,message,accountList);
             }
         }
     }
-    
+
+
+    /// <summary>
+    /// Gets the message from the sender and decides how to reply
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="message"></param>
+    /// <param name="accountList"></param>
+    /// <param name="clientsArray"></param>
+    /// <param name="playerIndex"></param>
+    private static void MessageProcessing(TcpClient sender, string message,List<Account> accountList,TcpClient[] clientsArray, int playerIndex)
+    {
+        List<TcpClient> clients = clientsArray.ToList();
+        NetworkStream senderStream = sender.GetStream();
+        string[] splitter = message.Split(":");
+        int c = 0;
+        int identifier = 0;
+        if (int.TryParse(splitter[1], out c))
+        {
+            identifier = int.Parse(splitter[1]);
+        }
+
+        switch (identifier)
+        {
+            case TCPClientToHost.DISCONNECT:
+                
+                accountList.Any(account => account.Disconnect(sender));
+                clientsArray[playerIndex] = null;
+                break;
+
+
+            default:
+                break;
+        }
+    }
+
     /// <summary>
     /// The logic for login.
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="message"></param>
-    /// <param name="clients"></param>
     /// <param name="accountList"></param>
-    private static void LoginPart(TcpClient sender, string message, List<TcpClient> clients, List<Account> accountList)
+    private static void LoginPart(TcpClient sender, string message, List<Account> accountList)
     {
         string[] messageSplitter = message.Split(':');
         string log = messageSplitter[0], pas = messageSplitter[1];
@@ -82,39 +118,8 @@ public class TCPMessageProcessing
             stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
         }
     }
-    
-    
-    
-    /// <summary>
-    /// Gets the message from the sender and decides how to reply
-    /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="message"></param>
-    /// <param name="clients"></param>
-    private static void MessageProcessing(TcpClient sender, string message, List<TcpClient> clients)
-    {
-        NetworkStream senderStream = sender.GetStream();
-        string response = "";
-        string[] splitter = message.Split(":");
-        int c = 0;
-        int identifier = 0;
-        if (int.TryParse(splitter[1], out c))
-        {
-            identifier = int.Parse(splitter[1]);
-        }
-
-        switch (identifier)
-        {
-            case 1:
-                SendTCPMessage("Sendning to the client who sent message", sender);
-                SendTCPMessageToAllOtherClients("Message to all other connected clients", sender, clients);
-                break;
 
 
-            default:
-                break;
-        }
-    }
     /// <summary>
     /// Sends a message(respond) only to the sender
     /// </summary>

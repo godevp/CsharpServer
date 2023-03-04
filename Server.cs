@@ -16,7 +16,7 @@ class Server
     #region Variables
     
     //Common
-    private IPAddress serverIP = IPAddress.Parse("192.168.0.189");
+    private IPAddress serverIP = IPAddress.Parse("192.168.0.156");
     int serverPort = 20001;
     static int bufferSize = 1024;
     byte[] bytesToSend;
@@ -131,9 +131,8 @@ class Server
                 // Convert the received data to a string
                 string data = Encoding.ASCII.GetString(buffer, 0, bytesReceived);
                 Console.WriteLine(data);
-                
-                List<TcpClient> clientsList = clients.ToList();
-                TCPMessageProcessing.StartMessageProcessing(client, data, clientsList, accountList);
+
+                TCPMessageProcessing.StartMessageProcessing(client, data, accountList,clients,playerIndex);
                 
                
             }
