@@ -51,7 +51,10 @@ class Server
         tcpListener = new TcpListener(serverIP, serverPort);
         tcpListener.Start();
         accountList = new List<Account>();
-        accountList.Add(new Account("123","123"));
+        accountList = AccountJSONScript.Load().accounts;
+        
+        //AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
+        
         Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
     }
     /// <summary>

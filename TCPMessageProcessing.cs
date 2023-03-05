@@ -12,6 +12,8 @@ public struct TCPHostToClient
 public struct TCPClientToHost
 {
     public const int DISCONNECT = 1;
+    public const int REGISTRATION = 2;
+    public const int LOGIN = 3;
 
 }
 public class TCPMessageProcessing
@@ -21,18 +23,27 @@ public class TCPMessageProcessing
         string[] messageSplitter = message.Split(':');
         List<TcpClient> clients = clientsArray.ToList();
         
-        if (messageSplitter.Length > 1)
+        if (messageSplitter.Length > 0)
         {
-            string log = messageSplitter[0], pas = messageSplitter[1];
-            if (accountList.Any(account => (account.getLogin() == log && account.isConnected && account.clientCopy == sender)))
+            string log = "";
+            if (messageSplitter.Length > 1)
+                log = messageSplitter[1];
+
+            if (accountList.Any(account => (account.getLogin() == log && account.GetIsConnected() && account.GetTcpClient() == sender)))
             {
                 //message processing part
                 MessageProcessing(sender, message,accountList,clientsArray,playerIndex);
             }
             else
-            { 
-                //login part
-                LoginPart(sender,message,accountList);
+            {
+                if (int.TryParse(messageSplitter[0], out _))
+                {
+                    if (int.Parse(messageSplitter[0]) == TCPClientToHost.LOGIN)//check that the identifier is for login
+                    {
+                        //login part
+                        LoginPart(sender,message,accountList);
+                    }
+                }
             }
         }
     }
@@ -51,20 +62,27 @@ public class TCPMessageProcessing
         List<TcpClient> clients = clientsArray.ToList();
         NetworkStream senderStream = sender.GetStream();
         string[] splitter = message.Split(":");
-        int c = 0;
+        
         int identifier = 0;
-        if (int.TryParse(splitter[1], out c))
+        string userName = splitter[1];
+        if (int.TryParse(splitter[0], out _))
         {
-            identifier = int.Parse(splitter[1]);
+            identifier = int.Parse(splitter[0]);
         }
 
         switch (identifier)
         {
-            case TCPClientToHost.DISCONNECT:
+            case TCPClientToHost.REGISTRATION:
                 
+                break;
+
+            case TCPClientToHost.DISCONNECT:
+            {
                 accountList.Any(account => account.Disconnect(sender));
                 clientsArray[playerIndex] = null;
-                break;
+                break; 
+            }
+               
 
 
             default:
@@ -81,7 +99,8 @@ public class TCPMessageProcessing
     private static void LoginPart(TcpClient sender, string message, List<Account> accountList)
     {
         string[] messageSplitter = message.Split(':');
-        string log = messageSplitter[0], pas = messageSplitter[1];
+        
+        string log = messageSplitter[1], pas = messageSplitter[2];
         if (accountList.Any(account => account.isLoginValid(log,pas,sender)))
         {
             byte[] successMessageBytes = Encoding.ASCII.GetBytes(TCPHostToClient.LOGGED_SUCCESSFULLY.ToString());
@@ -107,7 +126,7 @@ public class TCPMessageProcessing
                     //the password received for existing login is incorrect.
                     errorMessage = "the password is incorrect.";
                 }
-                else if(tempAccount.isConnected)
+                else if(tempAccount.GetIsConnected())
                 {
                     //the password received for existing login is incorrect.
                     errorMessage = "the account is in use.";

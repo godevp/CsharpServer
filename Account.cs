@@ -7,11 +7,11 @@ using System.Text;
 public class Account
 {
     //Login properties
-    private string login = "123";
-    private string password = "123";
-    public bool isConnected = false;
+    public string login = "123";
+    public string password = "123";
+    private bool isConnected = false;
 
-    public TcpClient clientCopy;
+    private TcpClient clientCopy;
     
     public Account(string login, string password)
     {
@@ -44,11 +44,19 @@ public class Account
         return true;
     }
 
+    public TcpClient GetTcpClient()
+    {
+        return clientCopy;
+    }
     public string getLogin()
     {
         return login;
     }
 
+    public bool GetIsConnected()
+    {
+        return isConnected;
+    }
     public bool Disconnect(TcpClient client)
     {
         if (client == clientCopy)
