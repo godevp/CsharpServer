@@ -6,7 +6,8 @@ public struct TCPHostToClient
 {
     public const int LOGGED_SUCCESSFULLY = 1;
     public const int LOGIN_DENIED = 2;
-
+    public const int REGISTRATION_FAILED = 3;
+    public const int REGISTRATION_APPROVED = 4;
 }
 
 public struct TCPClientToHost
@@ -38,10 +39,16 @@ public class TCPMessageProcessing
             {
                 if (int.TryParse(messageSplitter[0], out _))
                 {
-                    if (int.Parse(messageSplitter[0]) == TCPClientToHost.LOGIN)//check that the identifier is for login
+                    int ident = int.Parse(messageSplitter[0]);
+                    if (ident == TCPClientToHost.LOGIN)//check that the identifier is for login
                     {
                         //login part
                         LoginPart(sender,message,accountList);
+                    }
+
+                    if (ident == TCPClientToHost.REGISTRATION)
+                    {
+                        RegistrationPart(sender, message, accountList);
                     }
                 }
             }
@@ -72,17 +79,12 @@ public class TCPMessageProcessing
 
         switch (identifier)
         {
-            case TCPClientToHost.REGISTRATION:
-                
-                break;
-
             case TCPClientToHost.DISCONNECT:
             {
                 accountList.Any(account => account.Disconnect(sender));
                 clientsArray[playerIndex] = null;
-                break; 
             }
-               
+                break; 
 
 
             default:
@@ -115,7 +117,7 @@ public class TCPMessageProcessing
             if (!(accountList.Any(account => account.getLogin() == log)))
             {
                 //no login like that found in created accounts.
-                errorMessage = "account with this login not exists in our database.";
+                errorMessage = "account with this login doesn't exist in our database.";
             }
             else
             {
@@ -138,6 +140,22 @@ public class TCPMessageProcessing
         }
     }
 
+    private static void RegistrationPart(TcpClient sender, string message, List<Account> accountList)
+    {
+        string[] splitter = message.Split(':');
+        string log = splitter[1], pas = splitter[2];
+
+        if (accountList.Any(account => account.getLogin() == log))
+        {
+            SendTCPMessage(TCPHostToClient.REGISTRATION_FAILED.ToString() + ':' + "The username is taken",sender);
+            return;
+        }
+
+        accountList.Add(new Account(log,pas));
+        AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
+        SendTCPMessage(TCPHostToClient.REGISTRATION_APPROVED.ToString() + ':' + log + ':' + pas,sender);
+        Console.WriteLine("Registered new account, Username: " + log + " Password: " + pas );
+    }
 
     /// <summary>
     /// Sends a message(respond) only to the sender
