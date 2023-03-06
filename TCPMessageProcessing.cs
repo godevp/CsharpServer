@@ -178,9 +178,29 @@ public class TCPMessageProcessing
 
                 string[] elements = {TCPHostToClient.YOUR_POSITION.ToString(),posToSend};
                 SendTCPMessage(CombineWithSeparator(elements,separator.ToString()),sender);
-                
+                //todo: update it so we send not only the position 
                 string[] elements2 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(), userAccount.GetCharacterOnline(), posToSend};
                 SendTCPMessageToAllOtherClients(CombineWithSeparator(elements2,separator.ToString()),sender,clients);
+
+                foreach (var acc in accountList)
+                {
+                    if (acc.GetTcpClient() != sender)
+                    {
+                        if (acc.c1 == acc.GetCharacterOnline())
+                        {
+                            string[] elements3 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(),acc.GetCharacterOnline(),acc.c1Position};
+                            Console.WriteLine("Sending: " + CombineWithSeparator(elements3,separator.ToString()));
+                            SendTCPMessage(CombineWithSeparator(elements3,separator.ToString()),sender);
+                        }
+                        if (acc.c2 == acc.GetCharacterOnline())
+                        {
+                            string[] elements3 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(),acc.GetCharacterOnline(),acc.c2Position};
+                            Console.WriteLine("Sending: " + CombineWithSeparator(elements3,separator.ToString()));
+                            SendTCPMessage(CombineWithSeparator(elements3,separator.ToString()),sender);
+                        }
+                    }
+                }
+                
                 break;
             }
             default:
