@@ -17,6 +17,8 @@ public class Account
     public string c2 = "";
     public string c1Position = "0,1.1,0";
     public string c2Position = "0,1.1,0";
+    public string c1DestPos = "0,1.1,0";
+    public string c2DestPos = "0,1.1,0";
 
     private string characterOnline = "";
     public Account(string login, string password)

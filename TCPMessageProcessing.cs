@@ -158,18 +158,21 @@ public class TCPMessageProcessing
             {
                 int slot = (int.TryParse(splitter[2], out _)) ? int.Parse(splitter[2]) : 0;
                 string posToSend = "";
+                string destPosToSend = "";
                 switch (slot)
                 {
                     case 1:
                     {
                         userAccount.SetCharacterOnline(userAccount.c1);
                         posToSend = userAccount.c1Position;
+                        destPosToSend = userAccount.c1DestPos;
                         break;
                     }
                     case 2:
                     {
                         userAccount.SetCharacterOnline(userAccount.c2);
                         posToSend = userAccount.c2Position;
+                        destPosToSend = userAccount.c2DestPos;
                         break;
                     }
                     
@@ -180,7 +183,7 @@ public class TCPMessageProcessing
                 elementsList.Add(posToSend);
                 
                 //todo: update it so we send not only the position 
-                string[] elements2 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(), userAccount.GetCharacterOnline(), posToSend};
+                string[] elements2 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(), userAccount.GetCharacterOnline(), posToSend,destPosToSend };
                 SendTCPMessageToAllOtherClients(CombineWithSeparator(elements2,separator.ToString()),sender,clients);
                 foreach (var acc in accountList)
                 {
@@ -191,19 +194,15 @@ public class TCPMessageProcessing
                         if (acc.c1 == acc.GetCharacterOnline())
                         {
                             elementsList.Add(acc.c1Position);
-                           // string[] elements3 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(),acc.GetCharacterOnline(),acc.c1Position};
-                           // SendTCPMessage(CombineWithSeparator(elements3,separator.ToString()),sender);
+                            elementsList.Add(acc.c1DestPos);
                         }
                         if (acc.c2 == acc.GetCharacterOnline())
                         {
                             elementsList.Add(acc.c2Position);
-                           // string[] elements3 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(),acc.GetCharacterOnline(),acc.c2Position};
-                           // SendTCPMessage(CombineWithSeparator(elements3,separator.ToString()),sender);
+                            elementsList.Add(acc.c2DestPos);
                         }
                     }
                 }
-                //  string[] elements = {TCPHostToClient.YOUR_POSITION.ToString(),posToSend};
-                
                 string [] elementsArray = elementsList.ToArray();
                 SendTCPMessage(CombineWithSeparator(elementsArray,separator.ToString()),sender);
                 break;
