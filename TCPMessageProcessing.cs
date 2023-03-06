@@ -8,6 +8,10 @@ public struct TCPHostToClient
     public const int LOGIN_DENIED = 2;
     public const int REGISTRATION_FAILED = 3;
     public const int REGISTRATION_APPROVED = 4;
+    public const int CANT_CREATE_CHARACTER = 5;
+    public const int CHARACTER_CREATED = 6;
+    public const int NEW_CHARACTER_JOINED_SERVER = 7;
+    public const int YOUR_POSITION = 8;
 }
 
 public struct TCPClientToHost
@@ -15,10 +19,22 @@ public struct TCPClientToHost
     public const int DISCONNECT = 1;
     public const int REGISTRATION = 2;
     public const int LOGIN = 3;
-
+    public const int SAVE_NEW_CHARACTER = 4;
+    public const int DELETE_CHARACTER = 5;
+    public const int CHARACTER_JOINING_WORLD = 6;
 }
 public class TCPMessageProcessing
 {
+    public static char separator = ':';
+    
+    /// <summary>
+    /// The start of message processing, decides what will be next *mainMessageProcessing/login/registration
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="message"></param>
+    /// <param name="accountList"></param>
+    /// <param name="clientsArray"></param>
+    /// <param name="playerIndex"></param>
     public static void StartMessageProcessing(TcpClient sender, string message, List<Account> accountList, TcpClient[] clientsArray, int playerIndex)
     {
         string[] messageSplitter = message.Split(':');
@@ -76,17 +92,97 @@ public class TCPMessageProcessing
         {
             identifier = int.Parse(splitter[0]);
         }
-
+        var userAccount = accountList.Find(account => account.GetTcpClient() == sender);
+        
         switch (identifier)
         {
             case TCPClientToHost.DISCONNECT:
             {
                 accountList.Any(account => account.Disconnect(sender));
                 clientsArray[playerIndex] = null;
+                 break;
             }
-                break; 
+            case TCPClientToHost.SAVE_NEW_CHARACTER:
+            {
+                int slot = (int.TryParse(splitter[2],out _)) ? int.Parse(splitter[2]) : 0;
+                string nameForNewCharacter = splitter[3];
+                
 
+                if (accountList.Any(account => account.c1 == nameForNewCharacter || account.c2 == nameForNewCharacter))
+                {
+                    //send message that this name is taken
+                    string[] messageElements = { TCPHostToClient.CANT_CREATE_CHARACTER.ToString(), "The name is taken"};
+                    SendTCPMessage(CombineWithSeparator(messageElements,separator.ToString()),sender);
+                    break;
+                }
+                switch (slot)
+                {
+                    case 1:
+                    {
+                        userAccount.c1 = nameForNewCharacter;
+                        break;
+                    }
+                    case 2:
+                    {
+                        userAccount.c2 = nameForNewCharacter;
+                        break;
+                    }
+                }
+                AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
+                string[] elements = { TCPHostToClient.CHARACTER_CREATED.ToString(), slot.ToString(), nameForNewCharacter ,"Character created"};
+                SendTCPMessage(CombineWithSeparator(elements,separator.ToString()),sender);
+                break;
+            }
+            case TCPClientToHost.DELETE_CHARACTER:
+            {
+                int slot = (int.TryParse(splitter[2], out _)) ? int.Parse(splitter[2]) : 0;
+                switch (slot)
+                {
+                    case 1:
+                    {
+                        userAccount.c1 = "";
+                        break;
+                    }
+                    case 2:
+                    {
+                        userAccount.c2 = "";
+                        break;
+                    }
+                    
+                    default: break;
+                }
+                AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
+                break;
+            }
+            case TCPClientToHost.CHARACTER_JOINING_WORLD:
+            {
+                int slot = (int.TryParse(splitter[2], out _)) ? int.Parse(splitter[2]) : 0;
+                string posToSend = "";
+                switch (slot)
+                {
+                    case 1:
+                    {
+                        userAccount.SetCharacterOnline(userAccount.c1);
+                        posToSend = userAccount.c1Position;
+                        break;
+                    }
+                    case 2:
+                    {
+                        userAccount.SetCharacterOnline(userAccount.c2);
+                        posToSend = userAccount.c2Position;
+                        break;
+                    }
+                    
+                    default: break;
+                }
 
+                string[] elements = {TCPHostToClient.YOUR_POSITION.ToString(),posToSend};
+                SendTCPMessage(CombineWithSeparator(elements,separator.ToString()),sender);
+                
+                string[] elements2 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(), userAccount.GetCharacterOnline(), posToSend};
+                SendTCPMessageToAllOtherClients(CombineWithSeparator(elements2,separator.ToString()),sender,clients);
+                break;
+            }
             default:
                 break;
         }
@@ -105,7 +201,9 @@ public class TCPMessageProcessing
         string log = messageSplitter[1], pas = messageSplitter[2];
         if (accountList.Any(account => account.isLoginValid(log,pas,sender)))
         {
-            byte[] successMessageBytes = Encoding.ASCII.GetBytes(TCPHostToClient.LOGGED_SUCCESSFULLY.ToString());
+            var acc = accountList.Find((account => account.login == log));
+            string[] combinedElements = { TCPHostToClient.LOGGED_SUCCESSFULLY.ToString(), acc.c1, acc.c2 };
+            byte[] successMessageBytes = Encoding.ASCII.GetBytes(CombineWithSeparator(combinedElements,separator.ToString()));
             var stream = sender.GetStream();
             stream.Write(successMessageBytes, 0, successMessageBytes.Length);
         }
@@ -139,7 +237,12 @@ public class TCPMessageProcessing
             stream.Write(errorMessageBytes, 0, errorMessageBytes.Length);
         }
     }
-
+    /// <summary>
+    /// Logic for registration new account.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="message"></param>
+    /// <param name="accountList"></param>
     private static void RegistrationPart(TcpClient sender, string message, List<Account> accountList)
     {
         string[] splitter = message.Split(':');
@@ -156,7 +259,16 @@ public class TCPMessageProcessing
         SendTCPMessage(TCPHostToClient.REGISTRATION_APPROVED.ToString() + ':' + log + ':' + pas,sender);
         Console.WriteLine("Registered new account, Username: " + log + " Password: " + pas );
     }
-
+    /// <summary>
+    /// Will combine all strings in 1 with a separator which you specify.
+    /// </summary>
+    /// <param name="variables"></param>
+    /// <param name="separator"></param>
+    /// <returns></returns>
+    public static string CombineWithSeparator(string[] variables, string separator)
+    {
+        return string.Join(separator, variables);
+    }
     /// <summary>
     /// Sends a message(respond) only to the sender
     /// </summary>

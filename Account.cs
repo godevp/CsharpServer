@@ -10,15 +10,30 @@ public class Account
     public string login = "123";
     public string password = "123";
     private bool isConnected = false;
-
     private TcpClient clientCopy;
     
+    //characters
+    public string c1 = "";
+    public string c2 = "";
+    public string c1Position = "0,1.1,0";
+    public string c2Position = "0,1.1,0";
+
+    private string characterOnline = "";
     public Account(string login, string password)
     {
         this.login = login;
         this.password = password;
     }
 
+    public void SetCharacterOnline(string name)
+    {
+        characterOnline = name;
+    }
+
+    public string GetCharacterOnline()
+    {
+        return characterOnline;
+    }
 
     public bool isLoginValid(string login, string password, TcpClient client)
     {
