@@ -16,7 +16,7 @@ class Server
     #region Variables
     
     //Common
-    private IPAddress serverIP = IPAddress.Parse("10.0.236.77");
+    private IPAddress serverIP = IPAddress.Parse("192.168.0.156");
     int serverPort = 20001;
     static int bufferSize = 1024;
     byte[] bytesToSend;

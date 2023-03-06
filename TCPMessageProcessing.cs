@@ -184,7 +184,7 @@ public class TCPMessageProcessing
                 
                 //todo: update it so we send not only the position 
                 string[] elements2 = {TCPHostToClient.NEW_CHARACTER_JOINED_SERVER.ToString(), userAccount.GetCharacterOnline(), posToSend,destPosToSend };
-                SendTCPMessageToAllOtherClients(CombineWithSeparator(elements2,separator.ToString()),sender,clients);
+                SendTCPMessageToAllOtherClients(CombineWithSeparator(elements2,separator.ToString()),sender,accountList);
                 foreach (var acc in accountList)
                 {
                     if (acc.GetTcpClient() != sender && acc.GetIsConnected())
@@ -310,14 +310,14 @@ public class TCPMessageProcessing
     /// <param name="message"></param>
     /// <param name="sender"></param>
     /// <param name="clients"></param>
-    private static void SendTCPMessageToAllOtherClients(string message,TcpClient sender, List<TcpClient> clients)
+    private static void SendTCPMessageToAllOtherClients(string message,TcpClient sender, List<Account> accountList)
     {
-        foreach (TcpClient client in clients)
+        foreach (Account account in accountList)
         {
             byte[] messageBytes = Encoding.ASCII.GetBytes(message);
-            if (client != sender && client != null)
+            if (account.GetTcpClient() != sender && account.GetTcpClient() != null && account.GetIsConnected())
             {
-                NetworkStream stream = client.GetStream();
+                NetworkStream stream = account.GetTcpClient().GetStream();
                 stream.Write(messageBytes, 0, messageBytes.Length);
             }
         }
