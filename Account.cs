@@ -78,6 +78,7 @@ public class Account
         {
             clientCopy = null;
             isConnected = false;
+            characterOnline = "";
             return true;
         }
 
