@@ -12,6 +12,7 @@ public struct TCPHostToClient
     public const int CHARACTER_CREATED = 6;
     public const int NEW_CHARACTER_JOINED_SERVER = 7;
     public const int YOUR_POSITION = 8;
+    public const int SET_PLAYER_POS_AND_DEST = 9;
 }
 
 public struct TCPClientToHost
@@ -22,6 +23,7 @@ public struct TCPClientToHost
     public const int SAVE_NEW_CHARACTER = 4;
     public const int DELETE_CHARACTER = 5;
     public const int CHARACTER_JOINING_WORLD = 6;
+    public const int MY_POS_AND_DEST = 7;
 }
 public class TCPMessageProcessing
 {
@@ -165,14 +167,14 @@ public class TCPMessageProcessing
                     {
                         userAccount.SetCharacterOnline(userAccount.c1);
                         posToSend = userAccount.c1Position;
-                        destPosToSend = userAccount.c1DestPos;
+                        destPosToSend = userAccount.GetC1DestPos();
                         break;
                     }
                     case 2:
                     {
                         userAccount.SetCharacterOnline(userAccount.c2);
                         posToSend = userAccount.c2Position;
-                        destPosToSend = userAccount.c2DestPos;
+                        destPosToSend = userAccount.GetC2DestPos();
                         break;
                     }
                     
@@ -194,17 +196,40 @@ public class TCPMessageProcessing
                         if (acc.c1 == acc.GetCharacterOnline())
                         {
                             elementsList.Add(acc.c1Position);
-                            elementsList.Add(acc.c1DestPos);
+                            elementsList.Add(acc.GetC1DestPos());
                         }
                         if (acc.c2 == acc.GetCharacterOnline())
                         {
                             elementsList.Add(acc.c2Position);
-                            elementsList.Add(acc.c2DestPos);
+                            elementsList.Add(acc.GetC2DestPos());
                         }
                     }
                 }
                 string [] elementsArray = elementsList.ToArray();
                 SendTCPMessage(CombineWithSeparator(elementsArray,separator.ToString()),sender);
+                break;
+            }
+            case TCPClientToHost.MY_POS_AND_DEST:
+            {
+                if (userAccount.GetCharacterOnline() == userAccount.c1)
+                {
+                    userAccount.c1Position = splitter[2];
+                    userAccount.SetC1DestPos(splitter[3]);
+                }
+                if (userAccount.GetCharacterOnline() == userAccount.c2)
+                {
+                    userAccount.c2Position = splitter[2];
+                    userAccount.SetC2DestPos(splitter[3]);
+                }
+
+                string[] elements =
+                {
+                    TCPHostToClient.SET_PLAYER_POS_AND_DEST.ToString(),
+                    userAccount.GetCharacterOnline(),
+                    splitter[2],
+                    splitter[3]
+                };
+                SendTCPMessageToAllOtherClients(CombineWithSeparator(elements,separator.ToString()),sender,accountList);
                 break;
             }
             default:
@@ -315,7 +340,7 @@ public class TCPMessageProcessing
         foreach (Account account in accountList)
         {
             byte[] messageBytes = Encoding.ASCII.GetBytes(message);
-            if (account.GetTcpClient() != sender && account.GetTcpClient() != null && account.GetIsConnected())
+            if (account.GetTcpClient() != sender && account.GetTcpClient() != null && account.GetIsConnected() && account.GetCharacterOnline() != "")
             {
                 NetworkStream stream = account.GetTcpClient().GetStream();
                 stream.Write(messageBytes, 0, messageBytes.Length);
