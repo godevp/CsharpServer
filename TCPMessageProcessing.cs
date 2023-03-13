@@ -13,6 +13,7 @@ public struct TCPHostToClient
     public const int NEW_CHARACTER_JOINED_SERVER = 7;
     public const int YOUR_POSITION = 8;
     public const int SET_PLAYER_POS_AND_DEST = 9;
+    public const int TARGET_CONFIRMED = 10;
 }
 
 public struct TCPClientToHost
@@ -24,6 +25,7 @@ public struct TCPClientToHost
     public const int DELETE_CHARACTER = 5;
     public const int CHARACTER_JOINING_WORLD = 6;
     public const int MY_POS_AND_DEST = 7;
+    public const int MY_TARGET_IS = 8;
 }
 public class TCPMessageProcessing
 {
@@ -232,6 +234,25 @@ public class TCPMessageProcessing
                 SendTCPMessageToAllOtherClients(CombineWithSeparator(elements,separator.ToString()),sender,accountList);
                 break;
             }
+
+            case TCPClientToHost.MY_TARGET_IS:
+            {
+                var targetName = splitter[2];
+                List<string> elementsList = new List<string>();
+                elementsList.Add(TCPHostToClient.TARGET_CONFIRMED.ToString());
+                if (targetName == "")
+                {
+                    userAccount.SetCharTarget("");
+                    break;
+                }
+                if (accountList.Any(account => (account.c1 == targetName || account.c2 == targetName)))
+                {
+                    userAccount.SetCharTarget(targetName);
+                    elementsList.Add(targetName);
+                    SendTCPMessage(CombineWithSeparatorByList(elementsList,separator.ToString()),sender);
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -302,7 +323,7 @@ public class TCPMessageProcessing
             SendTCPMessage(TCPHostToClient.REGISTRATION_FAILED.ToString() + ':' + "The username is taken",sender);
             return;
         }
-
+        
         accountList.Add(new Account(log,pas));
         AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
         SendTCPMessage(TCPHostToClient.REGISTRATION_APPROVED.ToString() + ':' + log + ':' + pas,sender);
@@ -315,6 +336,10 @@ public class TCPMessageProcessing
     /// <param name="separator"></param>
     /// <returns></returns>
     public static string CombineWithSeparator(string[] variables, string separator)
+    {
+        return string.Join(separator, variables);
+    }
+    public static string CombineWithSeparatorByList(List<string> variables, string separator)
     {
         return string.Join(separator, variables);
     }

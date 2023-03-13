@@ -20,6 +20,7 @@ public class Account
     public string c2Position = "0,1.1,0";
     private string c1DestPos = "0,1.1,0";
     private string c2DestPos = "0,1.1,0";
+    private string characterTarget = "";
 
     private string characterOnline = "";
 
@@ -45,6 +46,15 @@ public class Account
     {
         return c2DestPos;
     }
+    public void SetCharTarget(string newTarget)
+    {
+        characterTarget = newTarget;
+    }
+    public string GetCharTarget()
+    {
+        return characterTarget;
+    }
+    
 
    
 
