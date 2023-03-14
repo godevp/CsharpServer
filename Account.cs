@@ -16,10 +16,23 @@ public class Account
     //characters
     public string c1 = "";
     public string c2 = "";
+
+    public float c1Health = 100.0f;
+    public float c2Health = 100.0f;
+
+    public float c1Damage = 20.0f;
+    public float c2Damage = 20.0f;
+
+    /*public float c1Mana = 100.0f;
+    public float c2Mana = 100.0f;*/
+    
     public string c1Position = "0,1.1,0";
     public string c2Position = "0,1.1,0";
     private string c1DestPos = "0,1.1,0";
     private string c2DestPos = "0,1.1,0";
+    
+    
+    
     private string characterTarget = "";
 
     private string characterOnline = "";

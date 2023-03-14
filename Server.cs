@@ -16,7 +16,7 @@ class Server
     #region Variables
     
     //Common
-    private IPAddress serverIP = IPAddress.Parse("10.0.251.209");
+    private IPAddress serverIP = IPAddress.Parse("192.168.0.156");
     int serverPort = 20001;
     static int bufferSize = 1024;
     byte[] bytesToSend;
@@ -25,12 +25,9 @@ class Server
     IPAddress clientIP;
     
     //UDP Part
-    Thread udpThread;
     private Socket udpSocket;
     
     //TCP Part
-    Thread tcpThread;
-    public bool StartUpdateOfClients = false;
     private const int MAX_PLAYERS = 100;
     private TcpClient[] clients = new TcpClient[MAX_PLAYERS];
     private TcpListener tcpListener;
@@ -47,15 +44,16 @@ class Server
     {
         //Todo: On start of the server, load a JSON file which will contain all the existing accounts to a list of accounts.
         Console.WriteLine("Server start");
-        tcpThread = new Thread(new ThreadStart(ListenForClients));
         tcpListener = new TcpListener(serverIP, serverPort);
         tcpListener.Start();
         accountList = new List<Account>();
         accountList = AccountJSONScript.Load().accounts;
         
-        //AccountJSONScript.Save(new ListOfAccounts { accounts = accountList });
-        
         Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
+    }
+
+    public void CombatSystem()
+    {
     }
     /// <summary>
     /// Listens for incoming TCP client connections, accepts them, finds an available slot in the clients array, and starts a new thread to handle the client.
