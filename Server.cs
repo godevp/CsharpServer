@@ -23,6 +23,7 @@ class Server
     EndPoint clientEndPoint;
     Int32 recvBytes;
     IPAddress clientIP;
+    public Thread msgProcessingThread;
     
     //UDP Part
     private Socket udpSocket;
@@ -48,18 +49,18 @@ class Server
         tcpListener.Start();
         accountList = new List<Account>();
         accountList = AccountJSONScript.Load().accounts;
-        
+        /*msgProcessingThread = new Thread(ListenForClients);
+        msgProcessingThread.Start();*/
+        ListenForClients();
         Console.WriteLine("Server started on {0}:{1}", serverIP.ToString(), serverPort);
     }
 
-    public void CombatSystem()
-    {
-    }
     /// <summary>
     /// Listens for incoming TCP client connections, accepts them, finds an available slot in the clients array, and starts a new thread to handle the client.
     /// </summary>
     public void ListenForClients()
     {
+        Console.WriteLine("StartListen");
         // Wait for a client to connect
         TcpClient client = tcpListener.AcceptTcpClient();
 
